@@ -1,0 +1,192 @@
+# ==============================================================================
+# Pixoo-64 Weather Engine & Forecast Aggregator (Home Assistant Native)
+# ==============================================================================
+
+template:
+  - trigger:
+      # Update every 30 minutes, on HA startup, and at 20:00 (target shift) & 23:59 (history snapshot)
+      - trigger: time_pattern
+        minutes: "/30"
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: time
+        at: "20:00:00"
+      - trigger: time
+        at: "23:59:00"
+    action:
+      - action: weather.get_forecasts
+        target:
+          entity_id: weather.forecast_home
+        data:
+          type: hourly
+        response_variable: hourly_data
+    sensor:
+      - name: "Pixoo Forecast Engine"
+        unique_id: pixoo_forecast_engine
+        icon: mdi:weather-partly-cloudy
+        state: >-
+          {{ states('weather.forecast_home') }}
+        attributes:
+          # Daily target: today before 20:00, tomorrow at/after 20:00
+          target_date: >-
+            {% set now_j = now() %}
+            {% if now_j.hour >= 20 %}
+              {{ (now_j + timedelta(days=1)).strftime('%Y-%m-%d') }}
+            {% else %}
+              {{ now_j.strftime('%Y-%m-%d') }}
+            {% endif %}
+
+          # Snapshot yesterday's daytime high (captured at 23:59, seeded with 13.8°C from 2026-11-12 history)
+          yesterday_day_max: >-
+            {% set cur_saved = this.attributes.get('yesterday_day_max', 13.8) if this is defined and this.attributes is defined else 13.8 %}
+            {% if now().hour == 23 and now().minute >= 58 %}
+              {{ this.attributes.get('today_day_max', cur_saved) if this is defined and this.attributes is defined else cur_saved }}
+            {% else %}
+              {{ cur_saved }}
+            {% endif %}
+
+          # Today's daytime max (8:00 - 19:00 local time)
+          today_day_max: >-
+            {% set today_str = now().strftime('%Y-%m-%d') %}
+            {% set ns = namespace(max=-99) %}
+            {% if hourly_data is defined and 'weather.forecast_home' in hourly_data %}
+              {% for f in hourly_data['weather.forecast_home']['forecast'] %}
+                {% set dt = as_datetime(f.datetime) | as_local %}
+                {% if dt.strftime('%Y-%m-%d') == today_str and dt.hour >= 8 and dt.hour <= 19 %}
+                  {% if f.temperature > ns.max %}
+                    {% set ns.max = f.temperature %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {% set cur_t = state_attr('weather.forecast_home', 'temperature') %}
+            {% if now().hour >= 8 and now().hour <= 19 and cur_t is not none and cur_t > ns.max %}
+              {% set ns.max = cur_t %}
+            {% endif %}
+            {% set prev_today = this.attributes.get('today_day_max', -99) if this is defined and this.attributes is defined else -99 %}
+            {% if now().hour >= 8 and prev_today > ns.max %}
+              {% set ns.max = prev_today %}
+            {% endif %}
+            {{ ns.max if ns.max != -99 else 18 }}
+
+          # Target daytime high (8:00 - 19:00 local time, used for trend calculation)
+          target_day_max: >-
+            {% set t_date = (now() + timedelta(days=1)).strftime('%Y-%m-%d') if now().hour >= 20 else now().strftime('%Y-%m-%d') %}
+            {% set ns = namespace(max=-99) %}
+            {% if hourly_data is defined and 'weather.forecast_home' in hourly_data %}
+              {% for f in hourly_data['weather.forecast_home']['forecast'] %}
+                {% set dt = as_datetime(f.datetime) | as_local %}
+                {% if dt.strftime('%Y-%m-%d') == t_date and dt.hour >= 8 and dt.hour <= 19 %}
+                  {% if f.temperature > ns.max %}
+                    {% set ns.max = f.temperature %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {% set cur_t = state_attr('weather.forecast_home', 'temperature') %}
+            {% if now().hour < 20 and now().hour >= 8 and cur_t is not none and cur_t > ns.max %}
+              {% set ns.max = cur_t %}
+            {% endif %}
+            {{ ns.max if ns.max != -99 else 18 }}
+
+          # Target Day Min Temp (with live override if current temp < forecast low before 20:00)
+          temp_min: >-
+            {% set t_date = (now() + timedelta(days=1)).strftime('%Y-%m-%d') if now().hour >= 20 else now().strftime('%Y-%m-%d') %}
+            {% set ns = namespace(min=99) %}
+            {% if hourly_data is defined and 'weather.forecast_home' in hourly_data %}
+              {% for f in hourly_data['weather.forecast_home']['forecast'] %}
+                {% set dt = as_datetime(f.datetime) | as_local %}
+                {% if dt.strftime('%Y-%m-%d') == t_date %}
+                  {% if f.temperature < ns.min %}
+                    {% set ns.min = f.temperature %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {% set cur_t = state_attr('weather.forecast_home', 'temperature') %}
+            {% set calc_min = ns.min if ns.min != 99 else (cur_t if cur_t is not none else 10) %}
+            {% if now().hour < 20 and cur_t is not none and cur_t < calc_min %}
+              {{ cur_t | round(0) }}
+            {% else %}
+              {{ calc_min | round(0) }}
+            {% endif %}
+
+          # Target Day Max Temp
+          temp_max: >-
+            {% set t_date = (now() + timedelta(days=1)).strftime('%Y-%m-%d') if now().hour >= 20 else now().strftime('%Y-%m-%d') %}
+            {% set ns = namespace(max=-99) %}
+            {% if hourly_data is defined and 'weather.forecast_home' in hourly_data %}
+              {% for f in hourly_data['weather.forecast_home']['forecast'] %}
+                {% set dt = as_datetime(f.datetime) | as_local %}
+                {% if dt.strftime('%Y-%m-%d') == t_date %}
+                  {% if f.temperature > ns.max %}
+                    {% set ns.max = f.temperature %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {% set cur_t = state_attr('weather.forecast_home', 'temperature') %}
+            {% set calc_max = ns.max if ns.max != -99 else (cur_t if cur_t is not none else 18) %}
+            {% if now().hour < 20 and cur_t is not none and cur_t > calc_max %}
+              {{ cur_t | round(0) }}
+            {% else %}
+              {{ calc_max | round(0) }}
+            {% endif %}
+
+          # Peak Expected Hourly Precipitation (mm) across target day
+          precip_max: >-
+            {% set t_date = (now() + timedelta(days=1)).strftime('%Y-%m-%d') if now().hour >= 20 else now().strftime('%Y-%m-%d') %}
+            {% set ns = namespace(precip=0) %}
+            {% if hourly_data is defined and 'weather.forecast_home' in hourly_data %}
+              {% for f in hourly_data['weather.forecast_home']['forecast'] %}
+                {% set dt = as_datetime(f.datetime) | as_local %}
+                {% if dt.strftime('%Y-%m-%d') == t_date %}
+                  {% set p = f.precipitation | default(0) %}
+                  {% if p > ns.precip %}
+                    {% set ns.precip = p %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.precip | round(0) }}
+
+  # Expose clean individual sensors for ESPHome native API
+  - sensor:
+      - name: "Pixoo Temp Diff"
+        unique_id: pixoo_temp_diff
+        unit_of_measurement: "°C"
+        state: >-
+          {% set target_max = state_attr('sensor.pixoo_forecast_engine', 'target_day_max') | float(18) | round(0) %}
+          {% set yest_max = state_attr('sensor.pixoo_forecast_engine', 'yesterday_day_max') | float(13.8) | round(0) %}
+          {{ (target_max - yest_max) | int }}
+
+      - name: "Pixoo Temp Min"
+        unique_id: pixoo_temp_min
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('sensor.pixoo_forecast_engine', 'temp_min') | default(9, true) }}"
+
+      - name: "Pixoo Temp Max"
+        unique_id: pixoo_temp_max
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('sensor.pixoo_forecast_engine', 'temp_max') | default(18, true) }}"
+
+      - name: "Pixoo Precip Max"
+        unique_id: pixoo_precip_max
+        unit_of_measurement: "mm"
+        state: "{{ state_attr('sensor.pixoo_forecast_engine', 'precip_max') | default(0, true) }}"
+
+  # Binary Alert Sensors (Configurable thresholds)
+  - binary_sensor:
+      - name: "Pixoo Alert UV"
+        unique_id: pixoo_alert_uv
+        state: >-
+          {% set uv = state_attr('weather.forecast_home', 'uv_index') | float(states('sensor.uv_index') | float(0)) %}
+          {{ uv >= 6.0 }}
+
+      - name: "Pixoo Alert Pollen"
+        unique_id: pixoo_alert_pollen
+        state: >-
+          {% set pol = states('sensor.pollen_level') | default('low') %}
+          {{ pol in ['high', 'very_high', 'extreme', '多い', '非常に多い'] }}
