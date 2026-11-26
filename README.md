@@ -2,6 +2,10 @@
 
 Custom ESPHome firmware and Home Assistant templates for the **Divoom Pixoo-64** (`64×64` RGB LED matrix), featuring pixel-accurate custom typography, weather icons, adaptive room-light dimming, and an animated Shiba Inu companion.
 
+| Daytime (UV + Sun + Wind + Sitting Shiba) | Nighttime (Crescent Moon + Sleeping Shiba) |
+| :---: | :---: |
+| ![Daytime Dashboard](images/day.png) | ![Nighttime Dashboard](images/night.png) |
+
 ## Features
 
 - **5-Row `64×64` Pixel-Locked Layout (`pixoo_bitmaps.h`):**
