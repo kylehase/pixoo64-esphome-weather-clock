@@ -37,6 +37,25 @@ Custom ESPHome firmware and Home Assistant templates for the **Divoom Pixoo-64**
 
 ## Setup
 
+### 1. First-Time Hardware Flashing (Required Once)
+
+The stock Divoom firmware does not support OTA flashing of custom firmware, so **the initial ESPHome flash must be done over serial/UART**:
+
+1. **Disassemble the enclosure** carefully to expose the mainboard and its labeled UART programming pads (`GND`, `TX`, `RX`, `IO0`, `EN`, `VCC`).
+2. **Connect a USB-to-Serial adapter** by either:
+   - **Pogo-pin tools / clamp adapters** (recommended — no permanent soldering required), or
+   - **Soldering temporary leads** to the UART pads.
+   - *Tip:* Factory boards often have flux residue on the test pads; clean them with isopropyl alcohol if pogo pins don't make reliable contact, and make sure the internal Wi-Fi antenna connector is firmly seated before reassembly.
+3. *(Optional)* Back up the stock firmware first using `esptool.py` (`read_flash 0x0 0x400000`).
+4. Flash the initial ESPHome firmware over USB-Serial. After that, all future updates can be installed wirelessly via OTA.
+
+**Useful Resources:**
+- [ESPHome Pixoo Display Component Docs](https://esphome.io/components/display/pixoo/)
+- [ESPHome Pixoo Light (Brightness) Docs](https://esphome.io/components/light/pixoo/)
+- [Espressif `esptool` Documentation](https://docs.espressif.com/projects/esptool/)
+
+### 2. Home Assistant & Configuration
+
 1. Add the template sensors from `homeassistant_templates.yaml` to your Home Assistant `configuration.yaml` (and adjust entity IDs in `pixoo64.yaml` to match your weather/illuminance/light entities).
-2. Copy `secrets.yaml.example` to `secrets.yaml` and fill in your Wi-Fi and OTA credentials.
+2. Copy `secrets.yaml.example` to `secrets.yaml` and fill in your Wi-Fi and API encryption key.
 3. Copy `pixoo64.yaml`, `pixoo_bitmaps.h`, and `secrets.yaml` into your ESPHome config directory and install wirelessly.
