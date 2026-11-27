@@ -24,7 +24,7 @@ Custom ESPHome firmware and Home Assistant templates for the **Divoom Pixoo-64**
   - **Row 5:**
     - `1×14 px` smooth gradient vertical bars on the left (`X=0` Rain `mm`, `X=2` daytime UV index).
     - `14×14` primary weather icon (12 conditions: sun, crescent moon, partly cloudy day/night, cloudy, fog, rain, pouring, thunderstorm, 3-snowflake snow, hail, wind).
-    - Secondary badges on the right (rain `mm`, strong wind, cedar pollen) or an **8-frame animated Shiba Inu** (walking back and forth during the day, curled up sleeping at night) whenever space permits.
+    - Secondary badges on the right (rain `mm`, strong wind, cedar pollen), with an **8-frame animated Shiba Inu** (walking back and forth during the day, curled up sleeping at night) automatically filling the empty space whenever no—or few—badges are active.
 - **2-Stage Adaptive Dimming:**
   - Combines hardware panel brightness (`light: platform: pixoo`, `1%–90%`) with software RGB scaling (`DimmingDisplay`) and warm night-tint below `15%` RGB so the display can go far dimmer than the stock `1%` hardware floor during late-night hours (`22:00–07:30`), while responding immediately when bedroom lighting turns on.
 
