@@ -10,6 +10,10 @@ Custom ESPHome firmware and Home Assistant templates for the **Divoom Pixoo-64**
 
 ![Annotated Pixoo-64 Layout](images/annotated.png)
 
+### Weather Icons, Bars & Badges
+
+![Weather Icons and Badges](images/icons_and_badges.png)
+
 ## Features
 
 - **5-Row `64×64` Pixel-Locked Layout (`pixoo_bitmaps.h`):**
