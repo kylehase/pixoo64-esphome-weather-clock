@@ -6,6 +6,10 @@ Custom ESPHome firmware and Home Assistant templates for the **Divoom Pixoo-64**
 | :---: | :---: |
 | ![Daytime Dashboard](images/day.png) | ![Nighttime Dashboard](images/night.png) |
 
+### Layout Breakdown
+
+![Annotated Pixoo-64 Layout](images/annotated.png)
+
 ## Features
 
 - **5-Row `64×64` Pixel-Locked Layout (`pixoo_bitmaps.h`):**
